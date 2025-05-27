@@ -187,6 +187,7 @@ pyparsing==3.2.3
 pypdfium2==4.30.1
 PyPika==0.48.9
 pyproject_hooks==1.2.0
+pyrate-limiter==3.7.0
 pysbd==0.3.4
 pytest==8.3.5
 python-crfsuite==0.9.11
@@ -206,6 +207,7 @@ rsa==4.9.1
 safetensors==0.5.3
 scikit-learn==1.6.1
 scipy==1.15.3
+sec-edgar-api==1.1.0
 sentence-transformers==4.1.0
 setuptools==80.9.0
 shellingham==1.5.4

@@ -4,12 +4,14 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from bs4 import BeautifulSoup
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler()]
-)
+# Optionally use sec-edgar-api if installed
+try:
+    from sec_edgar_api import EdgarClient
+    HAVE_EDGAR_CLIENT = True
+except ImportError:
+    HAVE_EDGAR_CLIENT = False
+
+ 
 logger = logging.getLogger("scraper_agent")
 
 app = FastAPI(title="Scraper Agent – SEC Filings")
@@ -22,6 +24,43 @@ class FilingResponse(BaseModel):
     cik: str
     filing_type: str
     document_text: str
+
+def fetch_with_python_loader(cik, filing_type):
+    """
+    Try to fetch the latest filing using the sec-edgar-api Python loader.
+    Returns the document text if successful, else None.
+    """
+    if not HAVE_EDGAR_CLIENT:
+        logger.warning("sec-edgar-api not installed; skipping Python loader.")
+        return None
+
+    try:
+        edgar = EdgarClient(user_agent="finance-assistant-bot (youremail@example.com)")
+        logger.info("Trying sec-edgar-api Python loader...")
+        submissions = edgar.get_submissions(cik=cik)
+        filings = submissions.get("filings", {}).get("recent", {})
+        if not filings:
+            logger.warning("No recent filings from sec-edgar-api loader.")
+            return None
+        accession_numbers = filings.get("accessionNumber", [])
+        form_types = filings.get("form", [])
+        primary_docs = filings.get("primaryDocument", [])
+        for acc, ftype, doc in zip(accession_numbers, form_types, primary_docs):
+            if ftype.upper() == filing_type.upper():
+                clean_cik = cik.lstrip("0")
+                acc_nodash = acc.replace("-", "")
+                filing_url = f"https://www.sec.gov/Archives/edgar/data/{clean_cik}/{acc_nodash}/{doc}"
+                logger.info(f"Found {filing_type} via sec-edgar-api loader: {filing_url}")
+                filing_resp = requests.get(filing_url, headers={"User-Agent": "finance-assistant-bot (youremail@example.com)"}, timeout=10)
+                if filing_resp.status_code == 200:
+                    return filing_resp.text[:50000]
+                else:
+                    logger.warning(f"Failed to fetch doc from {filing_url} (loader)")
+        logger.warning("Requested filing type not found with sec-edgar-api loader.")
+        return None
+    except Exception as e:
+        logger.error(f"sec-edgar-api loader failed: {e}")
+        return None
 
 def fetch_with_edgar_api(cik, filing_type):
     """
@@ -38,7 +77,6 @@ def fetch_with_edgar_api(cik, filing_type):
             return None
 
         data = resp.json()
-        # Find most recent filing of the requested type
         filings = data.get("filings", {}).get("recent", {})
         if not filings:
             logger.warning("No recent filings found in JSON API.")
@@ -48,11 +86,8 @@ def fetch_with_edgar_api(cik, filing_type):
         form_types = filings.get("form", [])
         primary_docs = filings.get("primaryDocument", [])
 
-        # Look for the first filing of the requested type
         for acc, ftype, doc in zip(accession_numbers, form_types, primary_docs):
             if ftype.upper() == filing_type.upper():
-                # Construct filing URL
-                # Example: https://www.sec.gov/Archives/edgar/data/320193/000032019324000072/0000320193-24-000072.txt
                 clean_cik = cik.lstrip("0")
                 acc_nodash = acc.replace("-", "")
                 filing_url = f"https://www.sec.gov/Archives/edgar/data/{clean_cik}/{acc_nodash}/{doc}"
@@ -111,7 +146,18 @@ def fetch_with_atom_feed(cik, filing_type):
 @app.post("/filing", response_model=FilingResponse)
 async def get_filing(req: FilingRequest):
     logger.info(f"Request: CIK={req.cik}, Filing Type={req.filing_type}")
-    # 1. Try EDGAR JSON API first
+
+    # 1. Try sec-edgar-api Python loader (super simple)
+    text = fetch_with_python_loader(req.cik, req.filing_type)
+    if text:
+        logger.info("Success using sec-edgar-api Python loader.")
+        return FilingResponse(
+            cik=req.cik,
+            filing_type=req.filing_type,
+            document_text=text
+        )
+
+    # 2. Try SEC EDGAR JSON API
     text = fetch_with_edgar_api(req.cik, req.filing_type)
     if text:
         logger.info("Success using SEC EDGAR JSON API.")
@@ -120,8 +166,9 @@ async def get_filing(req: FilingRequest):
             filing_type=req.filing_type,
             document_text=text
         )
-    logger.warning("SEC EDGAR JSON API failed or did not return filing. Falling back to Atom feed.")
-    # 2. Fallback: Atom feed + BeautifulSoup
+
+    # 3. Fallback: Atom feed + BeautifulSoup
+    logger.warning("Both sec-edgar-api loader and JSON API failed. Falling back to Atom feed.")
     text = fetch_with_atom_feed(req.cik, req.filing_type)
     logger.info("Success using Atom feed fallback.")
     return FilingResponse(

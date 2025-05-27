@@ -1,11 +1,12 @@
-# data_ingestion/build_faiss.py
-
 import os
 import glob
 import pickle
+import logging
 
 from sentence_transformers import SentenceTransformer
 import faiss
+
+logger = logging.getLogger("build_faiss")
 
 def ingest_and_index(
     docs_folder: str,
@@ -19,13 +20,15 @@ def ingest_and_index(
     3. Embed with SentenceTransformer
     4. Build a FAISS index and save it + metadata
     """
-    # 1) Load embedder
+    logger.info(f"Loading embedder: {model_name}")
     model = SentenceTransformer(model_name)
 
     texts = []
     metadatas = []
     # 2) Read & chunk
+    logger.info(f"Reading .txt files from {docs_folder}")
     for txt_file in glob.glob(os.path.join(docs_folder, "*.txt")):
+        logger.info(f"Reading: {txt_file}")
         with open(txt_file, encoding="utf-8") as f:
             full = f.read()
         for i in range(0, len(full), chunk_size):
@@ -38,13 +41,15 @@ def ingest_and_index(
             })
 
     if not texts:
+        logger.error(f"No .txt files found in {docs_folder}")
         raise ValueError(f"No .txt files found in {docs_folder}")
 
-    # 3) Embed
+    logger.info(f"Embedding {len(texts)} chunks")
     embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=True)
 
     # 4) Build FAISS index
     dimension = embeddings.shape[1]
+    logger.info(f"Building FAISS index with dimension {dimension}")
     index = faiss.IndexFlatL2(dimension)
     index.add(embeddings)
 
@@ -53,7 +58,7 @@ def ingest_and_index(
     with open(f"{index_path}.meta", "wb") as f:
         pickle.dump(metadatas, f)
 
-    print(f"Indexed {len(texts)} chunks. Index saved to {index_path}")
+    logger.info(f"Indexed {len(texts)} chunks. Index saved to {index_path}")
 
 if __name__ == "__main__":
     import argparse
