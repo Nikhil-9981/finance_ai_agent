@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+alpha_vantage
+yfinance
+beautifulsoup4
+requests
+sentence-transformers
+faiss-cpu
+langgraph
+crewai
+whisper
+coqui-tts
+streamlit
+python-dotenv
+pydantic
