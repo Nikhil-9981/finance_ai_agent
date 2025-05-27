@@ -1,0 +1,4 @@
+This is a sample document about Asia tech stocks.
+It contains key points:
+- TSMC reported strong earnings.
+- Samsung results were mixed.
