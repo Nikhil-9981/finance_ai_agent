@@ -155,48 +155,6 @@ API Endpoints
     Voice Agent: /voice_brief — POST (audio in, audio out); /tts — POST (text to mp3)
 
     Orchestrator Agent: /orchestrate — POST — main entry for frontend
-
-
-
-
-
- Deployment
-Recommended: Render.com
-
-Each agent gets its own Web Service on Render.
-
-Steps:
-
-    Push code to GitHub.
-
-    For each agent:
-
-        Go to Render dashboard, click “New +”, select “Web Service.”
-
-        Point to the repo/subfolder, set the build/start commands:
-
-            Build: pip install -r requirements.txt
-
-            Start: uvicorn main:app --host 0.0.0.0 --port 10000 (change port as desired)
-
-        Set environment variables (API keys, service URLs, etc.).
-
-    After all agents are deployed, update each agent’s .env or config to use the public Render URLs (not localhost).
-
-    Deploy Streamlit frontend last, pointing to your orchestrator’s public endpoint.
-
-Troubleshooting:
-If you see “Connection Refused” errors, check that the service URLs are not pointing to localhost and that all dependent agents are up and running.
-Testing
-
-    Each FastAPI agent exposes /ping or /docs for quick testing.
-
-    Use curl or Postman to test each endpoint before integrating end-to-end.
-
-    Example:
-    curl https://api-agent-xxxxx.onrender.com/quote \
-  -H "Content-Type: application/json" \
-  -d '{"symbols":["TSM"],"history":true,"info":true}'
  
 
 
