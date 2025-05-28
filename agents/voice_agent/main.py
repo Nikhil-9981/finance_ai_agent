@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 import speech_recognition as sr
 import pyttsx3
+from gtts import gTTS
  
 logger = logging.getLogger("voice_agent")
 
@@ -41,21 +42,23 @@ async def stt(file: UploadFile = File(...)):
         os.unlink(wav_path)
     return {"text": text}
 
+
+
 @app.post("/tts")
 async def tts_endpoint(text: str = Form(...)):
     logger.info(f"TTS: Received text: {text[:100]!r}")
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
         out_path = tmp.name
     try:
-        tts_engine.save_to_file(text, out_path)
-        tts_engine.runAndWait()
+        tts = gTTS(text, lang='en', slow=False)
+        tts.save(out_path)
         logger.info(f"TTS: Audio saved at {out_path}")
     except Exception as e:
         logger.error(f"TTS error: {e}")
         os.unlink(out_path)
         raise HTTPException(500, f"TTS failed: {e}")
-
     return FileResponse(out_path, media_type="audio/mpeg", filename="tts_output.mp3")
+
 
 @app.post("/voice_brief")
 async def voice_brief(file: UploadFile = File(...)):

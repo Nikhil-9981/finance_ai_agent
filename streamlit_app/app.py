@@ -90,7 +90,7 @@ elif mode == "Type Text (verbal answer)":
         with st.spinner("Generating answer…"):
             try:
                 # Step 1: Ask orchestrator for text answer
-                resp = requests.post(ORCH_URL, json={"question": user_text}, timeout=60)
+                resp = requests.post(ORCH_URL, json={"question": user_text}, timeout=300)
                 resp.raise_for_status()
                 answer = resp.json().get("answer", "")
                 st.success("Here’s your market brief:")
