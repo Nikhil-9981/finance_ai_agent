@@ -20,6 +20,15 @@ class AnalyzeRequest(BaseModel):
 class AnalyzeResponse(BaseModel):
     answer: str
 
+class SymbolExtractRequest(BaseModel):
+    question: str
+
+class SymbolExtractResponse(BaseModel):
+    symbols: list[str]
+ 
+
+
+
 # --- Groq Llama 3.1/3.3 70B Instruct setup ---
 try:
     groq_key = os.environ.get("GROQ_API_KEY")
@@ -28,8 +37,8 @@ try:
     llm = ChatGroq(
         groq_api_key=groq_key,
         model_name="llama3-70b-8192",
-        temperature=0.7,
-        max_tokens=512
+        temperature=0.3,
+        max_tokens=1024
     )
 except Exception as e:
     logger.error(f"Error initializing Groq LLM: {e}")
@@ -66,3 +75,19 @@ async def analyze_graph(req: AnalyzeRequest):
 @app.get("/ping")
 def ping():
     return {"msg": "language agent up"}
+
+
+@app.post("/extract_symbols", response_model=SymbolExtractResponse)
+async def extract_symbols(req: SymbolExtractRequest):
+    prompt = (
+        "Extract the most relevant  stock ticker symbols (as a Python list of strings) from this question: "
+        f"{req.question}\n\nJust return the Python list, nothing else."
+    )
+    result = llm.invoke(prompt)
+    # Parse the returned string safely
+    import ast
+    try:
+        symbols = ast.literal_eval(result.content)
+    except Exception:
+        symbols = []
+    return SymbolExtractResponse(symbols=symbols)

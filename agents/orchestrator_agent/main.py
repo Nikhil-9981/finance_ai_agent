@@ -39,22 +39,40 @@ def save_text_for_faiss(doc_text, base_name="scraped_doc"):
     filename = f"{base_name}_{ts}.txt"
     with open(os.path.join(save_dir, filename), "w", encoding="utf-8") as f:
         f.write(doc_text)
+
+
 def api_node(state):
+    logger.info("Calling Language Agent to extract symbols...")
+    question = state["question"]
+    try:
+        extract_resp = requests.post(
+            LANGUAGE_AGENT_URL.replace("/analyze_graph", "/extract_symbols"),
+            json={"question": question}, timeout=300
+        )
+        extract_resp.raise_for_status()
+        symbols = extract_resp.json().get("symbols", [])
+        logger.info(f"Extracted symbols: {symbols}")
+        if not symbols:
+            symbols = ["TSM"]  # fallback if nothing found
+    except Exception as e:
+        logger.error(f"Symbol extraction failed: {e}")
+        symbols = ["TSM"]
+
     logger.info("Calling API Agent...")
     try:
-        resp = requests.post(API_AGENT_URL, json={"symbol": "TSM"}, timeout=10)
+        resp = requests.post(API_AGENT_URL, json={"symbols": symbols, "history": True, "info": True}, timeout=3000)
         resp.raise_for_status()
-        data = resp.json()
+        data = resp.json()["results"][0]  # just the first for now, or loop for all
         logger.info(f"API Agent response: {data}")
     except Exception as e:
         logger.error(f"API Agent failed: {e}")
-        data = {"symbol": "TSM", "price": "N/A", "timestamp": "N/A"}
+        data = {"symbol": symbols[0], "latest_price": "N/A", "latest_timestamp": "N/A"}
     return {"api_quote": data}
 
 def scraper_node(state):
     logger.info("Calling Scraper Agent...")
     try:
-        resp = requests.post(SCRAPER_AGENT_URL, json={"cik": "1046179", "filing_type": "20-F"}, timeout=15)
+        resp = requests.post(SCRAPER_AGENT_URL, json={"cik": "1046179", "filing_type": "20-F"}, timeout=300)
         resp.raise_for_status()
         data = resp.json()
         filing_text = data.get("document_text", "")
@@ -72,7 +90,7 @@ def retriever_node(state):
     logger.info("Calling Retriever Agent...")
     question = state["question"]
     try:
-        resp = requests.post(RETRIEVER_AGENT_URL, json={"query": question, "top_k": 5}, timeout=20)
+        resp = requests.post(RETRIEVER_AGENT_URL, json={"query": question, "top_k": 5}, timeout=300)
         resp.raise_for_status()
         data = resp.json()
         chunks = data.get("results", [])
@@ -138,7 +156,7 @@ def llm_node(state):
     if "answer" in state and state["answer"]:
         return {}
     try:
-        resp = requests.post(LANGUAGE_AGENT_URL, json={"question": question, "context": context}, timeout=30)
+        resp = requests.post(LANGUAGE_AGENT_URL, json={"question": question, "context": context}, timeout=3000)
         resp.raise_for_status()
         data = resp.json()
         answer = data.get("answer", "No answer.")
