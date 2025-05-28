@@ -77,3 +77,30 @@ TSMC beat estimates by 4 %, Samsung missed by 2 %. Regional sentiment is neutral
 
 ---
 
+# Requirements
+
+This project depends on several Python packages and external APIs.
+
+## Python Packages
+
+All requirements are in `requirements.txt`. Main dependencies include:
+
+- `fastapi`
+- `uvicorn`
+- `streamlit`
+- `yfinance`
+- `alpha_vantage`
+- `celery`
+- `redis`
+- `requests`
+- `speechrecognition`, `pyttsx3` (for voice)
+- `faiss-cpu`
+- `python-dotenv`
+- `beautifulsoup4`
+- `langchain-groq`
+- `sec-edgar-api` (optional, for enhanced SEC data)
+- `pandas`, `numpy`
+
+Install with:
+```bash
+pip install -r requirements.txt
