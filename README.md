@@ -42,9 +42,16 @@
 
 - 🚀 **Deployment Status**  
   The main application is deployed and accessible at the following URLs:
-  - [Finance AI Agent (Instance 1)](https://finance-ai-agent-tnjq.onrender.com)
-  - [Finance AI Agent (Instance 2)](https://finance-ai-agent-1.onrender.com)
 
+- [Orchestrator Agent](https://finance-ai-agent-rfqw.onrender.com/orchestrate)
+- [API Agent (Instance 1)](https://finance-ai-agent-tnjq.onrender.com)
+- [Scraper Agent (Instance 2)](https://finance-ai-agent-1.onrender.com)
+- [Retriever Agent](https://retriever-agent.onrender.com/retrieve)
+- [Language Agent](https://finance-ai-agent-rqd6.onrender.com/analyze_graph)
+- [Voice Agent - Voice Brief](https://finance-ai-agent-1-u7bk.onrender.com/voice_brief)
+- [Voice Agent - TTS](https://finance-ai-agent-1-u7bk.onrender.com/tts)
+
+- 
 - 🧠 **Retriever API (FAISS Agent)**  
   - The FAISS-based retriever agent is under development and currently hosted at:  
     [Retriever Agent](https://retriever-agent.onrender.com)  
