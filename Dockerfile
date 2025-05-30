@@ -1,52 +1,28 @@
-# ============================
-# Stage 1: Builder
-# ============================
-FROM python:3.11-slim AS builder
+# Use the official Python slim image
+FROM python:3.11-slim
 
-# Fix casing warning (FROM and AS match case)
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libffi-dev \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create virtual environment
-RUN python -m venv /opt/venv
-
-ENV PATH="/opt/venv/bin:$PATH"
-
-WORKDIR /app
-
-COPY retriever_agent_requirements.txt .
-
-# Install dependencies
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r retriever_agent_requirements.txt
-
-# ============================
-# Stage 2: Final minimal image
-# ============================
-FROM python:3.11-slim AS final
-
-# Install runtime-only dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV PATH="/opt/venv/bin:$PATH"
+# Prevent Python from writing .pyc files and buffering stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Set the working directory
 WORKDIR /app
 
-# Copy virtualenv from builder
-COPY --from=builder /opt/venv /opt/venv
+# Install system dependencies (for building some Python packages)
+RUN apt-get update && \
+    apt-get install -y gcc build-essential && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy application code
-COPY ./agents/retriever_agent ./agents/retriever_agent
-COPY ./data_ingestion ./data_ingestion
+# Copy requirements and install dependencies
+COPY retriever_agent_requirements.txt .
+RUN pip install --upgrade pip
+RUN pip install -r retriever_agent_requirements.txt
 
-EXPOSE 8003
+# Copy the actual application code
+COPY . .
 
-CMD ["uvicorn", "agents.retriever_agent.main:app", "--host", "0.0.0.0", "--port", "8003"]
+# Expose the FastAPI port
+EXPOSE 8000
+
+# Start the FastAPI app (update path as needed)
+CMD ["uvicorn", "agents.retriever_agent.main:app", "--host", "0.0.0.0", "--port", "8000"]

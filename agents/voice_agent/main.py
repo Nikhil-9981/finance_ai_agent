@@ -2,21 +2,41 @@ import os
 import logging
 import tempfile
 import requests
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 import speech_recognition as sr
 import pyttsx3
 from gtts import gTTS
- 
+
+# Setup logging with timestamps and levels
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 logger = logging.getLogger("voice_agent")
 
 app = FastAPI(title="Voice Agent – Offline STT/TTS")
 
+# Add CORS middleware (adjust origins as needed)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change to your frontend domains in production
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Global recognizer and pyttsx3 TTS engine instances
+recognizer = sr.Recognizer()
 tts_engine = pyttsx3.init()
 tts_engine.setProperty("rate", 150)
+
+# Executor for running blocking code without blocking the event loop
+executor = ThreadPoolExecutor()
 
 @app.post("/stt")
 async def stt(file: UploadFile = File(...)):
@@ -26,11 +46,15 @@ async def stt(file: UploadFile = File(...)):
         tmp.write(data)
         wav_path = tmp.name
 
-    recognizer = sr.Recognizer()
-    try:
+    loop = asyncio.get_event_loop()
+
+    def recognize_audio():
         with sr.AudioFile(wav_path) as source:
             audio = recognizer.record(source)
-        text = recognizer.recognize_sphinx(audio)
+        return recognizer.recognize_sphinx(audio)
+
+    try:
+        text = await loop.run_in_executor(executor, recognize_audio)
         logger.info(f"STT: Transcribed text: {text!r}")
     except sr.UnknownValueError:
         logger.error("STT: Sphinx could not understand audio")
@@ -39,13 +63,16 @@ async def stt(file: UploadFile = File(...)):
         logger.error(f"STT error: {e}")
         raise HTTPException(500, f"STT failed: {e}")
     finally:
-        os.unlink(wav_path)
+        try:
+            os.unlink(wav_path)
+        except Exception:
+            pass
+
     return {"text": text}
 
 
-
 @app.post("/tts")
-async def tts_endpoint(text: str = Form(...)):
+async def tts_endpoint(text: str = Form(..., min_length=1, max_length=500), background_tasks: BackgroundTasks = None):
     logger.info(f"TTS: Received text: {text[:100]!r}")
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
         out_path = tmp.name
@@ -55,15 +82,23 @@ async def tts_endpoint(text: str = Form(...)):
         logger.info(f"TTS: Audio saved at {out_path}")
     except Exception as e:
         logger.error(f"TTS error: {e}")
-        os.unlink(out_path)
+        try:
+            os.unlink(out_path)
+        except Exception:
+            pass
         raise HTTPException(500, f"TTS failed: {e}")
+
+    # Schedule temp file deletion after response
+    if background_tasks:
+        background_tasks.add_task(os.unlink, out_path)
+
     return FileResponse(out_path, media_type="audio/mpeg", filename="tts_output.mp3")
 
 
 @app.post("/voice_brief")
-async def voice_brief(file: UploadFile = File(...)):
+async def voice_brief(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
     """
-    Full pipeline: audio → STT → Orchestrator (API, Scraper, Retriever, LLM) → TTS → return audio.
+    Full pipeline: audio → STT → Orchestrator → TTS → return audio.
     """
     stt_resp = await stt(file)
     question = stt_resp.get("text", "")
@@ -82,16 +117,28 @@ async def voice_brief(file: UploadFile = File(...)):
 
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
         out_path = tmp.name
-    try:
+
+    def save_tts():
         tts_engine.save_to_file(answer, out_path)
         tts_engine.runAndWait()
+
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(executor, save_tts)
         logger.info(f"Voice Brief: TTS audio at {out_path}")
     except Exception as e:
         logger.error(f"Voice Brief TTS error: {e}")
-        os.unlink(out_path)
+        try:
+            os.unlink(out_path)
+        except Exception:
+            pass
         raise HTTPException(500, f"TTS failed: {e}")
 
+    if background_tasks:
+        background_tasks.add_task(os.unlink, out_path)
+
     return FileResponse(out_path, media_type="audio/mpeg", filename="voice_brief.mp3")
+
 
 @app.get("/ping")
 def ping():
