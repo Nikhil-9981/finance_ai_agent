@@ -34,19 +34,7 @@
 - [Voice Agent - Voice Brief](https://finance-ai-agent-1-u7bk.onrender.com/voice_brief)
 - [Voice Agent - TTS](https://finance-ai-agent-1-u7bk.onrender.com/tts)
 
-- 
-- 🧠 **Retriever API (FAISS Agent)**  
-  - The FAISS-based retriever agent is under development and currently hosted at:  
-    [Retriever Agent](https://retriever-agent.onrender.com)  
-  - Due to the increasing size of the retriever index, the API is facing issues on free-tier hosting. This is being worked on and will be resolved **by end of day today**.
-
-- 📄 **Documentation Update**  
-  Some parts of the documentation are currently incomplete due to time constraints. These will be updated soon to fully reflect all features and usage instructions.
-
-- 🎙️ **Speech Functionality**  
-  - **Text-to-microphone (speech-to-text)** is in progress.  
-  - **Text-to-speech** functionality is **not yet integrated**, and may cause minor runtime issues during interaction.  
-  - Both features are under active development and will be addressed in the upcoming deployment update.
+ 
 
 ---
 
