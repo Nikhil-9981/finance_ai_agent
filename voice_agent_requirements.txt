@@ -7,3 +7,4 @@ SpeechRecognition==3.14.3
 requests==2.32.3
 soundfile==0.13.1
 pocketsphinx==5.0.4
+gtts
