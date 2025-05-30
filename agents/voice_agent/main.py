@@ -10,7 +10,6 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 import speech_recognition as sr
-import pyttsx3
 from gtts import gTTS
 
 # Setup logging with timestamps and levels
@@ -32,9 +31,7 @@ app.add_middleware(
 
 # Global recognizer and pyttsx3 TTS engine instances
 recognizer = sr.Recognizer()
-tts_engine = pyttsx3.init()
-tts_engine.setProperty("rate", 150)
-
+ 
 # Executor for running blocking code without blocking the event loop
 executor = ThreadPoolExecutor()
 
