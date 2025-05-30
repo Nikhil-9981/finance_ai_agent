@@ -71,18 +71,11 @@ It combines **real-time and historical market data**, **LLM-based question answe
 
 ## Architecture
 
-graph TD
-    A[Streamlit Frontend] --> B[Orchestrator Agent]
-    B --> C[API Agent]
-    B --> D[Scraper Agent]
-    B --> E[Retriever Agent]
-    B --> F[Language Agent]
-    B --> G[Voice Agent]
-    C --> H[Market APIs]
-    D --> I[SEC Filings]
-    E --> J[FAISS Vector DB]
-    F --> K[LLM Service]
-    G --> L[Audio Processing]
+# Finance AI Agent
+
+![Architecture Diagram](https://github.com/Nikhil-9981/finance_ai_agent/blob/main/deepseek_mermaid_20250530_d0ac87.png?raw=true)
+
+An AI-driven multi-agent system for financial data analysis...
 
 
 
