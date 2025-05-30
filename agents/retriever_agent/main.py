@@ -4,9 +4,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from pinecone import Pinecone
 import cohere
+from dotenv import load_dotenv
 
 logger = logging.getLogger("retriever_agent")
 logging.basicConfig(level=logging.INFO)
+load_dotenv()
 
 # Config from environment
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
