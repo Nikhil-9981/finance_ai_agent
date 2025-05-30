@@ -13,9 +13,9 @@ logger = logging.getLogger("streamlit_app")
 logging.getLogger("streamlit_webrtc").setLevel(logging.ERROR)
 
 # ——— Configuration ———
-VOICE_AGENT_URL = os.getenv("VOICE_AGENT_URL", "http://localhost:8005/voice_brief")
-ORCH_URL = os.getenv("ORCHESTRATOR_AGENT_URL", "http://localhost:8006/orchestrate")
-VOICE_TTS_URL = os.getenv("VOICE_TTS_URL", "http://localhost:8005/tts")
+VOICE_AGENT_URL = os.getenv("VOICE_AGENT_URL", "https://finance-ai-agent-1-u7bk.onrender.com/tts")
+ORCH_URL = os.getenv("ORCHESTRATOR_AGENT_URL", "https://finance-ai-agent-rfqw.onrender.com/orchestrate")
+VOICE_TTS_URL = os.getenv("VOICE_TTS_URL", "https://finance-ai-agent-1-u7bk.onrender.com/voice_brief")
 
 WEBRTC_RTC_CONFIGURATION = RTCConfiguration({
     "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
