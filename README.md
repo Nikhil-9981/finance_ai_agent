@@ -9,7 +9,24 @@
 </div>
 
 ---
-
+  <a href="https://github.com/Nikhil-9981/AI_Agent_for_CSV_files">
+    <img src="images/logo.png" alt="Logo" width="100" height="100">
+  </a>
+  <h1>Finance AI Agent</h1>
+ 
+  
+  <!-- Shields -->
+  <p>
+    <a href="https://github.com/Nikhil-9981/AI_Agent_for_CSV_files/network/members">
+      <img src="https://img.shields.io/github/forks/Nikhil-9981/AI_Agent_for_CSV_files?style=for-the-badge" alt="Forks">
+    </a>
+    <a href="https://github.com/Nikhil-9981/AI_Agent_for_CSV_files/stargazers">
+      <img src="https://img.shields.io/github/stars/Nikhil-9981/AI_Agent_for_CSV_files?style=for-the-badge" alt="Stars">
+    </a>
+    <a href="https://github.com/Nikhil-9981/AI_Agent_for_CSV_files/issues">
+      <img src="https://img.shields.io/github/issues/Nikhil-9981/AI_Agent_for_CSV_files?style=for-the-badge" alt="Issues">
+    </a>
+  </p>
 ---
 
 **Video_url = https://drive.google.com/file/d/1XBixKRdV0ExpVJsHXe4B-BUEio4FdmcB/view?usp=sharing**
