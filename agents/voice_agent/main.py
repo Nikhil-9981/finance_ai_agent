@@ -94,7 +94,6 @@ async def tts_endpoint(text: str = Form(..., min_length=1, max_length=500), back
 
     return FileResponse(out_path, media_type="audio/mpeg", filename="tts_output.mp3")
 
-
 @app.post("/voice_brief")
 async def voice_brief(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
     """
@@ -119,8 +118,8 @@ async def voice_brief(file: UploadFile = File(...), background_tasks: Background
         out_path = tmp.name
 
     def save_tts():
-        tts_engine.save_to_file(answer, out_path)
-        tts_engine.runAndWait()
+        tts = gTTS(text=answer, lang='en', slow=False)
+        tts.save(out_path)
 
     loop = asyncio.get_event_loop()
     try:
@@ -138,6 +137,7 @@ async def voice_brief(file: UploadFile = File(...), background_tasks: Background
         background_tasks.add_task(os.unlink, out_path)
 
     return FileResponse(out_path, media_type="audio/mpeg", filename="voice_brief.mp3")
+
 
 
 @app.get("/ping")
