@@ -1,78 +1,91 @@
 import os
-import pickle
 import logging
-
+from typing import List, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
-import faiss
-import numpy as np
- 
+from pinecone import Pinecone
+
+# ---------------------- Logging Setup ----------------------
 logger = logging.getLogger("retriever_agent")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Config
-INDEX_PATH = os.getenv("FAISS_INDEX_PATH", "data_ingestion/faiss_index")
-META_PATH = INDEX_PATH + ".meta"
-EMBED_MODEL = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")
+# ---------------------- Environment Config ----------------------
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_INDEX = os.getenv("PINECONE_INDEX", "finance")
+EMBED_MODEL = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")  # Default to a commonly used model
 
-# Load FAISS index
-if not os.path.exists(INDEX_PATH) or not os.path.exists(META_PATH):
-    logger.error(f"Index or metadata missing at {INDEX_PATH} or {META_PATH}")
-    raise RuntimeError(f"Index or metadata missing at {INDEX_PATH}")
+if not PINECONE_API_KEY:
+    logger.error("Missing Pinecone API key in environment variables.")
+    raise RuntimeError("PINECONE_API_KEY is required")
 
-logger.info(f"Loading FAISS index from {INDEX_PATH}")
-index = faiss.read_index(INDEX_PATH)
-logger.info(f"Loading metadata from {META_PATH}")
-with open(META_PATH, "rb") as f:
-    metadatas = pickle.load(f)
+# ---------------------- Pinecone Initialization ----------------------
+try:
+    pc = Pinecone(api_key=PINECONE_API_KEY)
+    index = pc.Index(PINECONE_INDEX)
+except Exception as e:
+    logger.error(f"Failed to initialize Pinecone index '{PINECONE_INDEX}': {e}")
+    raise
 
-# Load embedder
-logger.info(f"Loading SentenceTransformer model: {EMBED_MODEL}")
-embedder = SentenceTransformer(EMBED_MODEL)
+# ---------------------- Embedder Initialization ----------------------
+try:
+    logger.info(f"Loading embedding model: {EMBED_MODEL}")
+    embedder = SentenceTransformer(EMBED_MODEL)
+except Exception as e:
+    logger.error(f"Failed to load embedding model '{EMBED_MODEL}': {e}")
+    raise RuntimeError(f"Failed to load embedder: {e}")
 
-# FastAPI setup
-app = FastAPI(title="Retriever Agent – FAISS")
+# ---------------------- FastAPI Initialization ----------------------
+app = FastAPI(title="Retriever Agent – Pinecone")
 
+# ---------------------- Pydantic Schemas ----------------------
 class RetrieveRequest(BaseModel):
     query: str
     top_k: int = 5
 
 class Chunk(BaseModel):
     text: str
-    source: str
-    offset: int
-    score: float
+    source: Optional[str] = ""
+    offset: Optional[int] = 0
+    score: Optional[float] = 0.0
 
 class RetrieveResponse(BaseModel):
     query: str
-    results: list[Chunk]
+    results: List[Chunk]
 
+# ---------------------- Retrieval Endpoint ----------------------
 @app.post("/retrieve", response_model=RetrieveResponse)
 async def retrieve(req: RetrieveRequest):
-    logger.info(f"Received query: {req.query}, top_k={req.top_k}")
-    # 1) Embed the query
-    q_emb = embedder.encode([req.query], convert_to_numpy=True)
-    # 2) Search FAISS
-    distances, indices = index.search(q_emb, req.top_k)
-    distances = distances[0]
-    indices = indices[0]
+    logger.info(f"Received query: '{req.query}', top_k={req.top_k}")
 
+    # Step 1: Embed the query
+    try:
+        query_vector = embedder.encode([req.query], convert_to_numpy=True)[0].tolist()
+    except Exception as e:
+        logger.error(f"Embedding failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
+
+    # Step 2: Query Pinecone
+    try:
+        pinecone_results = index.query(
+            vector=query_vector,
+            top_k=req.top_k,
+            include_metadata=True
+        )
+    except Exception as e:
+        logger.error(f"Pinecone query failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Pinecone query failed: {str(e)}")
+
+    # Step 3: Parse results
     results = []
-    for idx, dist in zip(indices, distances):
-        if idx < 0 or idx >= len(metadatas):
-            logger.warning(f"Invalid index returned by FAISS: {idx}")
-            continue
-        meta = metadatas[idx]
-        text = meta.get("text", None)
-        if text is None:
-            logger.error(f"Metadata missing 'text' field for index {idx}")
-            raise HTTPException(500, "Metadata missing text field")
+    for match in pinecone_results.matches:
+        meta = match.metadata or {}
         results.append(Chunk(
-            text=text,
-            source=meta["source"],
-            offset=meta["offset"],
-            score=float(dist),
+            text=meta.get("text", ""),
+            source=meta.get("source", ""),
+            offset=meta.get("offset", 0),
+            score=match.score
         ))
 
-    logger.info(f"Returning {len(results)} results for query: {req.query}")
+    logger.info(f"Returning {len(results)} results for query: '{req.query}'")
     return RetrieveResponse(query=req.query, results=results)
