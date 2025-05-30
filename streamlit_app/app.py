@@ -8,15 +8,15 @@ import logging
 
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
- 
+
 logger = logging.getLogger("streamlit_app")
-import logging
 logging.getLogger("streamlit_webrtc").setLevel(logging.ERROR)
 
 # ——— Configuration ———
 VOICE_AGENT_URL = os.getenv("VOICE_AGENT_URL", "http://localhost:8005/voice_brief")
+ORCH_URL = os.getenv("ORCHESTRATOR_AGENT_URL", "http://localhost:8006/orchestrate")
+VOICE_TTS_URL = os.getenv("VOICE_TTS_URL", "http://localhost:8005/tts")
 
-# WebRTC settings
 WEBRTC_RTC_CONFIGURATION = RTCConfiguration({
     "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
 })
@@ -33,10 +33,8 @@ def save_audio_frames_to_mono_wav(audio_frames, wav_path, sample_rate):
         wf.setframerate(sample_rate)
         for frame in audio_frames:
             arr = frame.to_ndarray()
-            # Downmix to mono if needed
             if arr.ndim > 1:
                 arr = np.mean(arr, axis=1)
-            # Normalize floats to int16
             if arr.dtype != np.int16:
                 arr = (arr * 32767).clip(-32768, 32767).astype(np.int16)
             arr = np.ascontiguousarray(arr)
@@ -48,7 +46,10 @@ def save_audio_frames_to_mono_wav(audio_frames, wav_path, sample_rate):
     except Exception as e:
         logger.error(f"[DEBUG] Could not read saved WAV for inspection: {e}")
 
-mode = st.radio("Select input mode:", ["Upload Audio File", "Record via Microphone"])
+mode = st.radio("Select input mode:", [
+    "Upload Audio File",
+    "Type Text (verbal answer)"
+])
 
 if mode == "Upload Audio File":
     audio_file = st.file_uploader("Upload a WAV/MP3 file", type=["wav", "mp3", "m4a"])
@@ -81,46 +82,30 @@ if mode == "Upload Audio File":
                     st.success("Here’s your market brief:")
                     st.audio(resp.content, format="audio/mp3")
 
-elif mode == "Record via Microphone":
-    st.info("Click ▶️ to start recording. Click ▶️ again to stop and send.")
-    webrtc_ctx = webrtc_streamer(
-        key="voice-recorder",
-        mode=WebRtcMode.SENDONLY,
-        rtc_configuration=WEBRTC_RTC_CONFIGURATION,
-        media_stream_constraints=MEDIA_CONSTRAINTS,
-        audio_receiver_size=256  # Bump up to avoid overflow
-    )
+ 
 
-    if webrtc_ctx.audio_receiver:
-        audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=2)
-        if audio_frames and st.button("Send Recording to Assistant"):
-            with st.spinner("Processing recording…"):
-                logger.info(f"Received {len(audio_frames)} frames from microphone. Saving to temp WAV...")
-                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                    wav_path = tmp.name
-                # Use sample_rate from first frame, default to 48000 if missing
-                sample_rate = getattr(audio_frames[0], "sample_rate", 48000)
-                save_audio_frames_to_mono_wav(audio_frames, wav_path, sample_rate)
+elif mode == "Type Text (verbal answer)":
+    user_text = st.text_area("Type your finance question here:")
+    if st.button("Send to Assistant") and user_text.strip():
+        with st.spinner("Generating answer…"):
+            try:
+                # Step 1: Ask orchestrator for text answer
+                resp = requests.post(ORCH_URL, json={"question": user_text}, timeout=300)
+                resp.raise_for_status()
+                answer = resp.json().get("answer", "")
+                st.success("Here’s your market brief:")
+                st.write(answer)
 
-                try:
-                    with open(wav_path, "rb") as f:
-                        files = {"file": ("recording.wav", f, "audio/wav")}
-                        logger.info(f"Sending recorded audio to voice agent: {VOICE_AGENT_URL}")
-                        resp = requests.post(VOICE_AGENT_URL, files=files)
-                    os.unlink(wav_path)
-                except Exception as e:
-                    logger.error(f"Error sending recorded file: {e}")
-                    st.error(f"Error sending recording: {e}")
-                    resp = None
-
-                if resp is not None:
-                    if resp.status_code != 200:
-                        logger.error(f"Voice agent error {resp.status_code}: {resp.text}")
-                        st.error(f"Error {resp.status_code}: {resp.text}")
-                    else:
-                        logger.info("Received successful response from voice agent.")
-                        st.success("Here’s your market brief:")
-                        st.audio(resp.content, format="audio/mp3")
+                # Step 2: TTS audio
+                tts_resp = requests.post(
+                    VOICE_TTS_URL, data={"text": answer}
+                )
+                if tts_resp.status_code == 200:
+                    st.audio(tts_resp.content, format="audio/mp3")
+                else:
+                    st.warning("Could not generate audio.")
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 st.markdown("---")
 st.markdown("Built with FastAPI voice agent • Streamlit • streamlit-webrtc")

@@ -1,103 +1,128 @@
-# agents/api_agent/main.py
-
 import os
 import logging
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import List, Optional
 from dotenv import load_dotenv
 import yfinance as yf
 from alpha_vantage.timeseries import TimeSeries
 
 logger = logging.getLogger("api_agent")
-
-# Load .env variables
+logging.basicConfig(level=logging.INFO)
 load_dotenv()
+
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
+app = FastAPI(title="API Agent – Full Market Data (AV+YF)")
 
-app = FastAPI(title="API Agent – Market Data")
+class StockRequest(BaseModel):
+    symbols: List[str]
+    history: bool = False
+    period: str = "5d"
+    interval: str = "1d"
+    info: bool = False
+    dividends: bool = False
+    splits: bool = False
+    financials: bool = False
+    corporate_actions: bool = False  # Now ignored for optimization
 
-class QuoteRequest(BaseModel):
+class StockResponse(BaseModel):
     symbol: str
+    latest_price: Optional[float] = None
+    latest_timestamp: Optional[str] = None
+    ohlcv_history: Optional[List[dict]] = None
+    info: Optional[dict] = None
+    dividends: Optional[List[dict]] = None
+    splits: Optional[List[dict]] = None
+    financials: Optional[dict] = None
+    # corporate_actions REMOVED for optimization
 
-class QuoteResponse(BaseModel):
-    symbol: str
-    price: float
-    timestamp: str
+class MultiStockResponse(BaseModel):
+    results: List[StockResponse]
 
-def get_quote_alpha_vantage(symbol: str):
-    """Try to get latest price from Alpha Vantage"""
+def av_get_timeseries(symbol, function, **kwargs):
     if not ALPHA_VANTAGE_API_KEY:
-        logger.error("Alpha Vantage API key not set.")
         raise Exception("Alpha Vantage API key not set")
     ts = TimeSeries(key=ALPHA_VANTAGE_API_KEY, output_format='json')
-    # Try intraday first (for most recent), fallback to daily
     try:
-        data, meta = ts.get_intraday(symbol=symbol, interval='5min', outputsize='compact')
-        if data:
-            latest_time = sorted(data.keys())[-1]
-            price = float(data[latest_time]['4. close'])
-            logger.info(f"Alpha Vantage INTRADAY success for {symbol}: {price} at {latest_time}")
-            return price, latest_time
+        if function == "INTRADAY":
+            data, meta = ts.get_intraday(symbol=symbol, interval=kwargs.get('interval', '5min'))
+        elif function == "DAILY":
+            data, meta = ts.get_daily(symbol=symbol)
+        else:
+            raise ValueError("Unknown AV function")
+        return data
     except Exception as e:
-        logger.warning(f"Alpha Vantage intraday fetch failed for {symbol}: {e}")
-    try:
-        data, meta = ts.get_daily(symbol=symbol, outputsize='compact')
-        if data:
-            latest_time = sorted(data.keys())[-1]
-            price = float(data[latest_time]['4. close'])
-            logger.info(f"Alpha Vantage DAILY success for {symbol}: {price} at {latest_time}")
-            return price, latest_time
-    except Exception as e:
-        logger.error(f"Alpha Vantage daily fetch failed for {symbol}: {e}")
-        raise Exception(f"Alpha Vantage fetch failed: {e}")
-    logger.error(f"Alpha Vantage: No data found for symbol {symbol}")
-    raise Exception("Alpha Vantage: No data found for symbol")
+        logger.warning(f"AV timeseries {function} failed for {symbol}: {e}")
+        return None
 
-def get_quote_yfinance(symbol: str):
-    try:
+def av_latest_from_ohlcv(data):
+    if not data:
+        return None, None
+    times = sorted(data.keys())
+    latest_time = times[-1]
+    price = float(data[latest_time]['4. close'])
+    return price, latest_time
+
+@app.post("/quote", response_model=MultiStockResponse)
+async def get_full_data(req: StockRequest):
+    all_results = []
+    for symbol in req.symbols:
+        result = {"symbol": symbol.upper()}
+        av_ohlcv = None
+        av_price = None
+        av_time = None
+        if ALPHA_VANTAGE_API_KEY:
+            av_ohlcv = av_get_timeseries(symbol, "INTRADAY")
+            av_price, av_time = av_latest_from_ohlcv(av_ohlcv)
+            if av_price is not None:
+                result["latest_price"] = round(av_price, 2)
+                result["latest_timestamp"] = av_time
+            # Provide only 5 most recent OHLCV rows if requested
+            if req.history and av_ohlcv:
+                data_points = []
+                for dt, v in list(av_ohlcv.items())[:5]:  # Only 5 days
+                    row = {
+                        "date": dt,
+                        "open": float(v['1. open']),
+                        "high": float(v['2. high']),
+                        "low": float(v['3. low']),
+                        "close": float(v['4. close']),
+                        "volume": float(v['5. volume']),
+                    }
+                    data_points.append(row)
+                result["ohlcv_history"] = data_points
         ticker = yf.Ticker(symbol)
-        data = ticker.history(period="1d")
-        if data.empty:
-            logger.error(f"yfinance: No data found for {symbol}")
-            raise Exception("yfinance: No data found")
-        latest = data.iloc[-1]
-        price = round(latest["Close"], 2)
-        timestamp = latest.name.isoformat()
-        logger.info(f"yfinance success for {symbol}: {price} at {timestamp}")
-        return price, timestamp
-    except Exception as e:
-        logger.error(f"yfinance fetch failed for {symbol}: {e}")
-        raise Exception(f"yfinance fetch failed: {e}")
-
-@app.post("/quote", response_model=QuoteResponse)
-async def get_quote(req: QuoteRequest):
-    logger.info(f"Received quote request for symbol: {req.symbol}")
-    # Try Alpha Vantage first
-    try:
-        price, timestamp = get_quote_alpha_vantage(req.symbol)
-        logger.info(f"Returned Alpha Vantage price for {req.symbol}")
-        return QuoteResponse(
-            symbol=req.symbol.upper(),
-            price=round(price, 2),
-            timestamp=timestamp
-        )
-    except Exception as av_err:
-        logger.warning(f"Alpha Vantage failed for {req.symbol}: {av_err}")
-        # Fallback to yfinance
         try:
-            price, timestamp = get_quote_yfinance(req.symbol)
-            logger.info(f"Returned yfinance price for {req.symbol}")
-            return QuoteResponse(
-                symbol=req.symbol.upper(),
-                price=round(price, 2),
-                timestamp=timestamp
-            )
-        except Exception as yf_err:
-            logger.error(
-                f"Both Alpha Vantage and yfinance failed for {req.symbol} "
-                f"(Alpha Vantage error: {av_err}, yfinance error: {yf_err})"
-            )
-            raise HTTPException(
-                status_code=404,
-                detail=f"Symbol not found (Alpha Vantage error: {av_err}, yfinance error: {yf_err})"
-            )
+            if result.get("latest_price") is None:
+                hist = ticker.history(period="1d")
+                if not hist.empty:
+                    latest = hist.iloc[-1]
+                    result["latest_price"] = round(latest["Close"], 2)
+                    result["latest_timestamp"] = str(latest.name)
+            if req.history and (not result.get("ohlcv_history")):
+                hist = ticker.history(period="5d", interval="1d")
+                result["ohlcv_history"] = hist.reset_index().tail(2).to_dict("records")
+            if req.info:
+                info = ticker.info
+                # Only return limited essential fields
+                result["info"] = {k: info[k] for k in [
+                    "longName", "sector", "industry", "currency", "exchange", "country", "website"
+                ] if k in info}
+            if req.dividends:
+                divs = ticker.dividends.reset_index().tail(3).to_dict("records")
+                result["dividends"] = divs
+            if req.splits:
+                splits = ticker.splits.reset_index().tail(3).to_dict("records")
+                result["splits"] = splits
+            if req.financials:
+                # Limit to last 5 rows for each financial report
+                result["financials"] = {
+                    "income_statement": ticker.financials.iloc[:, :3].to_dict() if not ticker.financials.empty else {},
+                    "balance_sheet": ticker.balance_sheet.iloc[:, :3].to_dict() if not ticker.balance_sheet.empty else {},
+                    "cashflow": ticker.cashflow.iloc[:, :3].to_dict() if not ticker.cashflow.empty else {}
+                }
+            # Do not fetch corporate actions for optimization!
+        except Exception as e:
+            logger.warning(f"yfinance fallback failed for {symbol}: {e}")
+        all_results.append(StockResponse(**result))
+    return MultiStockResponse(results=all_results)

@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from pinecone import Pinecone
 import cohere
 
-# Logging
 logger = logging.getLogger("retriever_agent")
 logging.basicConfig(level=logging.INFO)
 
@@ -13,6 +12,7 @@ logging.basicConfig(level=logging.INFO)
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX", "finance")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
+EMBED_MODEL = os.getenv("EMBED_MODEL1", "all-MiniLM-L6-v2")  # Default to a commonly used model
 
 # Initialize Pinecone client
 pc = Pinecone(api_key=PINECONE_API_KEY)

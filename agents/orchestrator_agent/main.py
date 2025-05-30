@@ -18,6 +18,7 @@ LANGUAGE_AGENT_URL = os.getenv("LANGUAGE_AGENT_URL", "http://localhost:8004/anal
 app = FastAPI(title="Orchestrator Agent (LangGraph)")
 
 # ----- State definition for LangGraph -----
+ 
 class MyState(TypedDict):
     question: str
     api_quote: dict
@@ -25,6 +26,8 @@ class MyState(TypedDict):
     retrieved_chunks: list
     context: str
     answer: str
+    symbol_details: list
+
 
 # ----- Workflow Nodes -----
 
@@ -39,40 +42,68 @@ def save_text_for_faiss(doc_text, base_name="scraped_doc"):
     filename = f"{base_name}_{ts}.txt"
     with open(os.path.join(save_dir, filename), "w", encoding="utf-8") as f:
         f.write(doc_text)
+
+
 def api_node(state):
+    logger.info("Calling Language Agent to extract symbols...")
+    question = state["question"]
+    print(question)
+    try:
+        extract_resp = requests.post( 
+            LANGUAGE_AGENT_URL.replace("/analyze_graph", "/extract_symbols"),
+            json={"question": question}, timeout=3000
+        )
+        
+        extract_resp.raise_for_status()
+        
+        symbols = extract_resp.json().get("symbols", [])
+        logger.info(f"Extracted symbols: {symbols}")
+        if not symbols:
+            symbols = ["TSM"]  # fallback if nothing found
+    except Exception as e:
+        logger.error(f"Symbol extraction failed: {e}")
+        symbols = ["TSM"]
+
     logger.info("Calling API Agent...")
     try:
-        resp = requests.post(API_AGENT_URL, json={"symbol": "TSM"}, timeout=10)
+        resp = requests.post(API_AGENT_URL, json={"symbols": symbols, "history": True, "info": True}, timeout=3000)
         resp.raise_for_status()
-        data = resp.json()
+        data = resp.json()["results"][0]  # just the first for now, or loop for all
         logger.info(f"API Agent response: {data}")
     except Exception as e:
         logger.error(f"API Agent failed: {e}")
-        data = {"symbol": "TSM", "price": "N/A", "timestamp": "N/A"}
+        data = {"symbol": symbols[0], "latest_price": "N/A", "latest_timestamp": "N/A"}
     return {"api_quote": data}
 
 def scraper_node(state):
     logger.info("Calling Scraper Agent...")
-    try:
-        resp = requests.post(SCRAPER_AGENT_URL, json={"cik": "1046179", "filing_type": "20-F"}, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-        filing_text = data.get("document_text", "")
-        logger.info(f"Scraper Agent got filing length: {len(filing_text)}")
-        # --- NEW: Save scraped text to file for FAISS ---
-        if filing_text:
-            save_text_for_faiss(filing_text, "TSMC_20F")
-    except Exception as e:
-        logger.error(f"Scraper Agent failed: {e}")
-        filing_text = ""
-    return {"filing_text": filing_text}
+    filings = []
+    # details were fetched from extract_symbols before!
+    details = state.get("symbol_details", [])
+    for d in details:
+        cik = d["cik"]
+        filing_type = d["filing_type"]
+        try:
+            resp = requests.post(SCRAPER_AGENT_URL, json={"cik": cik, "filing_type": filing_type}, timeout=300)
+            resp.raise_for_status()
+            data = resp.json()
+            filing_text = data.get("document_text", "")
+            logger.info(f"Scraper Agent got filing for {d['symbol']}, length: {len(filing_text)}")
+            if filing_text:
+                save_text_for_faiss(filing_text, f"{d['symbol']}_{filing_type}")
+            filings.append(filing_text)
+        except Exception as e:
+            logger.error(f"Scraper Agent failed for {d['symbol']}: {e}")
+            filings.append("")
+    return {"filing_text": "\n\n".join(filings)}
+
 
 
 def retriever_node(state):
     logger.info("Calling Retriever Agent...")
     question = state["question"]
     try:
-        resp = requests.post(RETRIEVER_AGENT_URL, json={"query": question, "top_k": 5}, timeout=20)
+        resp = requests.post(RETRIEVER_AGENT_URL, json={"query": question, "top_k": 3}, timeout=300)
         resp.raise_for_status()
         data = resp.json()
         chunks = data.get("results", [])
@@ -119,9 +150,11 @@ def context_builder_node(state):
     context_pieces = []
     # Quote
     quote = state.get("api_quote", {})
+    print("quote is :", quote)
     context_pieces.append(f"Latest quote for {quote.get('symbol')}: ${quote.get('price')} at {quote.get('timestamp')}")
     # Filing
     filing = state.get("filing_text", "")
+    print("fillin is :", filing)
     if filing:
         context_pieces.append(f"Latest SEC Filing: {filing[:2000]}")
     # Retriever
@@ -138,7 +171,7 @@ def llm_node(state):
     if "answer" in state and state["answer"]:
         return {}
     try:
-        resp = requests.post(LANGUAGE_AGENT_URL, json={"question": question, "context": context}, timeout=30)
+        resp = requests.post(LANGUAGE_AGENT_URL, json={"question": question, "context": context}, timeout=3000)
         resp.raise_for_status()
         data = resp.json()
         answer = data.get("answer", "No answer.")

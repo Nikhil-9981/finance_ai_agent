@@ -35,7 +35,7 @@ def fetch_with_python_loader(cik, filing_type):
         return None
 
     try:
-        edgar = EdgarClient(user_agent="finance-assistant-bot (youremail@example.com)")
+        edgar = EdgarClient(user_agent="finance-assistant-bot (rathaurnikhil14@gmail.com)")
         logger.info("Trying sec-edgar-api Python loader...")
         submissions = edgar.get_submissions(cik=cik)
         filings = submissions.get("filings", {}).get("recent", {})
@@ -51,7 +51,7 @@ def fetch_with_python_loader(cik, filing_type):
                 acc_nodash = acc.replace("-", "")
                 filing_url = f"https://www.sec.gov/Archives/edgar/data/{clean_cik}/{acc_nodash}/{doc}"
                 logger.info(f"Found {filing_type} via sec-edgar-api loader: {filing_url}")
-                filing_resp = requests.get(filing_url, headers={"User-Agent": "finance-assistant-bot (youremail@example.com)"}, timeout=10)
+                filing_resp = requests.get(filing_url, headers={"User-Agent": "finance-assistant-bot (rathaurnikhil14@gmail.com)"}, timeout=300)
                 if filing_resp.status_code == 200:
                     return filing_resp.text[:50000]
                 else:
@@ -71,7 +71,7 @@ def fetch_with_edgar_api(cik, filing_type):
     headers = {"User-Agent": "finance-assistant-bot (youremail@example.com)"}
     logger.info(f"Trying SEC EDGAR JSON API: {base_url}")
     try:
-        resp = requests.get(base_url, headers=headers, timeout=10)
+        resp = requests.get(base_url, headers=headers, timeout=100)
         if resp.status_code != 200:
             logger.warning(f"SEC EDGAR JSON API request failed: {resp.status_code}")
             return None
@@ -92,7 +92,7 @@ def fetch_with_edgar_api(cik, filing_type):
                 acc_nodash = acc.replace("-", "")
                 filing_url = f"https://www.sec.gov/Archives/edgar/data/{clean_cik}/{acc_nodash}/{doc}"
                 logger.info(f"Found {filing_type} filing via JSON API: {filing_url}")
-                filing_resp = requests.get(filing_url, headers=headers, timeout=10)
+                filing_resp = requests.get(filing_url, headers=headers, timeout=100)
                 if filing_resp.status_code == 200:
                     text = filing_resp.text[:50000]
                     return text
@@ -115,7 +115,7 @@ def fetch_with_atom_feed(cik, filing_type):
     )
     headers = {"User-Agent": "finance-assistant-bot (youremail@example.com)"}
     logger.info(f"Trying Atom feed: {feed_url}")
-    feed_resp = requests.get(feed_url, headers=headers, timeout=10)
+    feed_resp = requests.get(feed_url, headers=headers, timeout=100)
     if feed_resp.status_code != 200:
         logger.error(f"Failed to fetch EDGAR feed: {feed_resp.status_code}")
         raise HTTPException(502, "Failed to fetch EDGAR feed")
@@ -133,7 +133,7 @@ def fetch_with_atom_feed(cik, filing_type):
     doc_url = link_tag["href"]
     logger.info(f"Found filing link via Atom feed: {doc_url}")
 
-    doc_resp = requests.get(doc_url, headers=headers, timeout=10)
+    doc_resp = requests.get(doc_url, headers=headers, timeout=100)
     if doc_resp.status_code != 200:
         logger.error(f"Failed to fetch filing document: {doc_resp.status_code}")
         raise HTTPException(502, "Failed to fetch filing document")
