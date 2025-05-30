@@ -10,6 +10,33 @@
 
 ---
 
+---
+
+## ⚠️ Deployment & Feature Notes
+
+**Note :- Still working o nthe porject , Will complete by today night.**
+
+- 🚀 **Deployment Status**  
+  The main application is deployed and accessible at the following URLs:
+  - [Finance AI Agent (Instance 1)](https://finance-ai-agent-tnjq.onrender.com)
+  - [Finance AI Agent (Instance 2)](https://finance-ai-agent-1.onrender.com)
+
+- 🧠 **Retriever API (FAISS Agent)**  
+  - The FAISS-based retriever agent is under development and currently hosted at:  
+    [Retriever Agent](https://retriever-agent.onrender.com)  
+  - Due to the increasing size of the retriever index, the API is facing issues on free-tier hosting. This is being worked on and will be resolved **by end of day today**.
+
+- 📄 **Documentation Update**  
+  Some parts of the documentation are currently incomplete due to time constraints. These will be updated soon to fully reflect all features and usage instructions.
+
+- 🎙️ **Speech Functionality**  
+  - **Text-to-microphone (speech-to-text)** is in progress.  
+  - **Text-to-speech** functionality is **not yet integrated**, and may cause minor runtime issues during interaction.  
+  - Both features are under active development and will be addressed in the upcoming deployment update.
+
+---
+
+
 ## 🚀 Table of Contents
 
 - [About The Project](#about-the-project)
@@ -43,11 +70,18 @@ It combines **real-time and historical market data**, **LLM-based question answe
 
 ## Architecture
 
-[Streamlit UI] <--> [Orchestrator Agent] <==> [API Agent] (Market Data)
-<==> [Scraper Agent] (SEC Filings)
-<==> [Retriever Agent] (Vector DB/FAISS)
-<==> [Language Agent] (LLM/RAG)
-<==> [Voice Agent] (STT/TTS)
+graph TD
+    A[Streamlit Frontend] --> B[Orchestrator Agent]
+    B --> C[API Agent]
+    B --> D[Scraper Agent]
+    B --> E[Retriever Agent]
+    B --> F[Language Agent]
+    B --> G[Voice Agent]
+    C --> H[Market APIs]
+    D --> I[SEC Filings]
+    E --> J[FAISS Vector DB]
+    F --> K[LLM Service]
+    G --> L[Audio Processing]
 
 
 
@@ -94,21 +128,21 @@ It combines **real-time and historical market data**, **LLM-based question answe
 ```bash
 git clone https://github.com/YOUR_GITHUB/finance-ai-agent.git
 cd finance-ai-agent
-
+```
 
 2. Set Up Virtual Environment
-
+```bash
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-
+```
 
 3. Environment Variables
 
 Create a .env in the root or in each agent’s folder as needed:
 
 
-
+``` bash
 ALPHA_VANTAGE_API_KEY=your_key
 GROQ_API_KEY=your_key
 ORCHESTRATOR_AGENT_URL=https://your-orchestrator-url.onrender.com/orchestrate
@@ -118,13 +152,13 @@ RETRIEVER_AGENT_URL=https://your-retriever-agent-url.onrender.com/retrieve
 LANGUAGE_AGENT_URL=https://your-language-agent-url.onrender.com/analyze_graph
 VOICE_AGENT_URL=https://your-voice-agent-url.onrender.com/voice_brief
 VOICE_TTS_URL=https://your-voice-agent-url.onrender.com/tts
-
+```
 
 
 Run Locally
 
 Each agent is a FastAPI app. Example for API Agent:
-
+``` bash
 uvicorn agents.api_agent.main:app --host 0.0.0.0 --port 8001
 uvicorn agents.api_agent.main:app --port 8001 
 uvicorn agents.scraper_agent.main:app --port 8002 
@@ -134,15 +168,15 @@ uvicorn agents.voice_agent.main:app --port 8005
 uvicorn agents.orchestrator_agent.main:app --port 8006 
 ```
 Streamlit Frontend:
-
+``` bash
 streamlit run stream_app/main.py
-
+```
 
 
 API Endpoints
 
 (For full OpenAPI docs, run any FastAPI agent and visit /docs!)
-
+``` bash
     API Agent: /quote — POST — market data, prices, info, historicals
 
     Scraper Agent: /filing — POST — fetch latest SEC filings for a CIK/type
@@ -156,47 +190,21 @@ API Endpoints
 
     Orchestrator Agent: /orchestrate — POST — main entry for frontend
 
-
+```
 
 
 
  Deployment
+
 Recommended: Render.com
 
 Each agent gets its own Web Service on Render.
 
-Steps:
-
-    Push code to GitHub.
-
-    For each agent:
-
-        Go to Render dashboard, click “New +”, select “Web Service.”
-
-        Point to the repo/subfolder, set the build/start commands:
-
-            Build: pip install -r requirements.txt
-
-            Start: uvicorn main:app --host 0.0.0.0 --port 10000 (change port as desired)
-
-        Set environment variables (API keys, service URLs, etc.).
-
-    After all agents are deployed, update each agent’s .env or config to use the public Render URLs (not localhost).
+ 
+   
 
     Deploy Streamlit frontend last, pointing to your orchestrator’s public endpoint.
 
-Troubleshooting:
-If you see “Connection Refused” errors, check that the service URLs are not pointing to localhost and that all dependent agents are up and running.
-Testing
-
-    Each FastAPI agent exposes /ping or /docs for quick testing.
-
-    Use curl or Postman to test each endpoint before integrating end-to-end.
-
-    Example:
-    curl https://api-agent-xxxxx.onrender.com/quote \
-  -H "Content-Type: application/json" \
-  -d '{"symbols":["TSM"],"history":true,"info":true}'
  
 
 
@@ -227,7 +235,7 @@ Testing
 
         Working on video demonstration for future improvement.
 
-Roadmap & Future Improvements
+## Roadmap & Future Improvements
 
 Add more test functions for all agents and end-to-end flows.
 
@@ -244,7 +252,7 @@ Add monitoring/logging dashboards for easier debugging.
 Contact
 
 Nikhil Kumar Singh
-LinkedIn
+ 
 Email: rathaurnikhil14@gmail.com
 Project Link: https://github.com/Nikhil-9981/Finance_AI_agent
 <div align="center"> <h2>THANK YOU!</h2> <p>Your time and attention mean the world! ✨</p> </div> <p align="right">(<a href="#readme-top"><strong>Back to top</strong></a>)</p> ```
