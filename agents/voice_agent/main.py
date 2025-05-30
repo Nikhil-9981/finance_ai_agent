@@ -70,12 +70,14 @@ async def stt(file: UploadFile = File(...)):
 
 @app.post("/tts")
 async def tts_endpoint(text: str = Form(..., min_length=1, max_length=500), background_tasks: BackgroundTasks = None):
+    print("hi")
     logger.info(f"TTS: Received text: {text[:100]!r}")
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
         out_path = tmp.name
     try:
         tts = gTTS(text, lang='en', slow=False)
         tts.save(out_path)
+        print("success")
         logger.info(f"TTS: Audio saved at {out_path}")
     except Exception as e:
         logger.error(f"TTS error: {e}")
