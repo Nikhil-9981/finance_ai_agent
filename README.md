@@ -9,9 +9,7 @@
 </div>
 
 ---
-  <a href="https://github.com/Nikhil-9981/AI_Agent_for_CSV_files">
-    <img src="images/logo.png" alt="Logo" width="100" height="100">
-  </a>
+ 
   <h1>Finance AI Agent</h1>
  
   
@@ -260,10 +258,39 @@ Add monitoring/logging dashboards for easier debugging.
 
     Video Demo: Work in progress, will be shared soon.
 
-Contact
+## Contributing
 
-Nikhil Kumar Singh
- 
-Email: rathaurnikhil14@gmail.com
-Project Link: https://github.com/Nikhil-9981/Finance_AI_agent
-<div align="center"> <h2>THANK YOU!</h2> <p>Your time and attention mean the world! ✨</p> </div> <p align="right">(<a href="#readme-top"><strong>Back to top</strong></a>)</p> ```
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Don't forget to give the project a star! Thanks again!
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+<p align="right">(<a href="#readme-top"><strong>Back to top</strong></a>)</p>
+
+ #
+
+<div align="center">
+    <h2 style="font-size: 36px; font-weight: bold; color: #4CAF50; text-transform: uppercase; letter-spacing: 3px;">
+        Get in Touch
+    </h2>
+    <p style="font-size: 20px; font-style: italic; color: #333;">I’d love to hear from you!</p>
+    <p style="font-size: 18px; color: #FF6347;">
+        Nikhil Kumar Singh<br>
+        <a href="https://www.linkedin.com/in/nikhil9981/" style="color: #4CAF50; text-decoration: none; font-weight: bold;">@nikhil9981</a><br>
+        <a href="mailto:rathaurnikhil14@gmail.com" style="color: #4CAF50; text-decoration: none; font-weight: bold;">rathaurnikhil14@gmail.com</a><br><br>
+        Project Link: 
+        <a href="https://github.com/Nikhil-9981/AI_Agent_for_CSV_files" style="color: #FF6347; font-weight: bold; text-decoration: none;">AI Agent for CSV Files</a>
+    </p>
+    <h1 style="font-size: 60px; font-weight: bold; color: #FF6347; text-transform: uppercase; letter-spacing: 5px;">
+        THANK YOU!
+    </h1>
+    <p style="font-size: 24px; font-style: italic; color: #555;">
+        Your time and attention mean the world! ✨
+    </p>
+</div>
