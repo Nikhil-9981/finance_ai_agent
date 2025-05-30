@@ -10,10 +10,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("orchestrator_agent")
 
 # Agent endpoints
-API_AGENT_URL = os.getenv("API_AGENT_URL", "http://localhost:8001/quote")
-SCRAPER_AGENT_URL = os.getenv("SCRAPER_AGENT_URL", "http://localhost:8002/filing")
-RETRIEVER_AGENT_URL = os.getenv("RETRIEVER_AGENT_URL", "http://localhost:8003/retrieve")
-LANGUAGE_AGENT_URL = os.getenv("LANGUAGE_AGENT_URL", "http://localhost:8004/analyze_graph")
+API_AGENT_URL = os.getenv("API_AGENT_URL", "https://finance-ai-agent-tnjq.onrender.com/quote")
+SCRAPER_AGENT_URL = os.getenv("SCRAPER_AGENT_URL", "https://finance-ai-agent-1.onrender.com/filing")
+RETRIEVER_AGENT_URL = os.getenv("RETRIEVER_AGENT_URL", "https://retriever-agent.onrender.com/retrieve")
+LANGUAGE_AGENT_URL = os.getenv("LANGUAGE_AGENT_URL", "https://finance-ai-agent-rqd6.onrender.com/analyze_graph")
 
 app = FastAPI(title="Orchestrator Agent (LangGraph)")
 
@@ -98,7 +98,6 @@ def scraper_node(state):
     return {"filing_text": "\n\n".join(filings)}
 
 
-
 def retriever_node(state):
     logger.info("Calling Retriever Agent...")
     question = state["question"]
@@ -112,35 +111,9 @@ def retriever_node(state):
         logger.error(f"Retriever Agent failed: {e}")
         chunks = []
 
-    # ---- FALLBACK LOGIC HERE ----
-    fallback = False
-    fallback_message = "Sorry, I could not confidently answer from our knowledge base. Could you clarify or rephrase your question?"
-
-    if not chunks:
-        logger.warning("Retriever returned zero results. Triggering fallback.")
-        # Mark for fallback
-        fallback = True
-    else:
-        # Look at the first (best) score
-        try:
-            best_score = chunks[0].get("score", 999999)
-            # For FAISS L2, higher means worse match (tune threshold based on your data!)
-            if best_score > 400:  # <-- Adjust this number as you see fit!
-                logger.warning(f"Retriever score {best_score} is too high (bad match). Triggering fallback.")
-                fallback = True
-        except Exception as e:
-            logger.error(f"Could not extract score from chunk: {e}")
-            fallback = True
-
-    if fallback:
-        # Instead of moving to next node, SHORT-CIRCUIT the workflow:
-        return {
-            "retrieved_chunks": [],
-            "context": "",
-            "answer": fallback_message
-        }
-
+    # Remove fallback logic! Just pass the chunks (possibly empty)
     return {"retrieved_chunks": chunks}
+
 
 
 def context_builder_node(state):

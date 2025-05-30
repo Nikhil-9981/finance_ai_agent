@@ -101,7 +101,7 @@ async def voice_brief(file: UploadFile = File(...), background_tasks: Background
     if not question:
         raise HTTPException(400, "Could not transcribe audio")
 
-    ORCH_URL = os.getenv("ORCHESTRATOR_AGENT_URL", "http://localhost:8006/orchestrate")
+    ORCH_URL = os.getenv("ORCHESTRATOR_AGENT_URL", "https://finance-ai-agent-1-u7bk.onrender.com/voice_brief")
     try:
         resp = requests.post(ORCH_URL, json={"question": question}, timeout=60)
         resp.raise_for_status()
