@@ -12,8 +12,8 @@
 
 ---
 
-**Video_url = https://drive.google.com/file/d/1XBixKRdV0ExpVJsHXe4B-BUEio4FdmcB/view?usp=sharing
-**## ⚠️ Deployment & Feature Notes
+**Video_url = https://drive.google.com/file/d/1XBixKRdV0ExpVJsHXe4B-BUEio4FdmcB/view?usp=sharing**
+## ⚠️ Deployment & Feature Notes
 
 **Note :- Still working o nthe porject , Will complete by today night.**
 
