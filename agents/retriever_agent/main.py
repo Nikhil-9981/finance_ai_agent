@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # ---------------------- Environment Config ----------------------
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX", "finance")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")  # Default to a commonly used model
+EMBED_MODEL = os.getenv("EMBED_MODEL1", "all-MiniLM-L6-v2")  # Default to a commonly used model
 
 if not PINECONE_API_KEY:
     logger.error("Missing Pinecone API key in environment variables.")
