@@ -28,6 +28,14 @@
 ---
 
 **Video_url = https://drive.google.com/file/d/1XBixKRdV0ExpVJsHXe4B-BUEio4FdmcB/view?usp=sharing**
+
+
+## Live Demo Screenshot
+
+![Demo Screenshot](https://github.com/Nikhil-9981/finance_ai_agent/blob/main/WhatsApp%20Image%202025-05-30%20at%2018.03.29.jpeg?raw=true)
+
+
+
 ## ⚠️ Deployment & Feature Notes
 
 **Note :- Still working o nthe porject , Will complete by today night.**
@@ -72,6 +80,8 @@
 
 ---
 
+
+
 ## About The Project
 
 **Finance AI Agent** is an open multi-agent platform for financial intelligence.  
@@ -104,6 +114,17 @@ An AI-driven multi-agent system for financial data analysis...
 - **Celery/Redis:** Used for background tasks like periodic FAISS index updates.
 
 ---
+### 🛠️ Technologies & Tools Used
+
+* [![LangChain](https://img.shields.io/badge/LangChain-blue)](https://www.langchain.com/)
+* [![LangGraph](https://img.shields.io/badge/LangGraph-darkblue)](https://github.com/langchain-ai/langgraph)
+* [![Streamlit](https://img.shields.io/badge/Streamlit-red)](https://streamlit.io/)
+* [![FastAPI](https://img.shields.io/badge/FastAPI-teal)](https://fastapi.tiangolo.com/)
+* [![Python](https://img.shields.io/badge/Python-yellow)](https://www.python.org/)
+* [![Pinecone](https://img.shields.io/badge/Pinecone-black)](https://www.pinecone.io/)
+* [![Cohere](https://img.shields.io/badge/Cohere-purple)](https://cohere.com/)
+* [![Groq](https://img.shields.io/badge/Groq-black)](https://groq.com/)
+* [![yFinance](https://img.shields.io/badge/yFinance-orange)](https://pypi.org)*
 
 ## Key Features
 
