@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone
 
-# ---------------------- Logging Setup ----------------------
+# ----------------------- Logging Setup ----------------------
 logger = logging.getLogger("retriever_agent")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
